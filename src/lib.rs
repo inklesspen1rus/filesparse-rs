@@ -30,6 +30,9 @@ pub trait FileSparse {
     }
 
     /// Deallocate file region on disk.
+    /// Region end and may be safety larger than file size. File will keep its size
+    /// 
+    /// Note: some filesystems requires block-size-aligned regions
     fn deallocate_region(&self, #[allow(unused)] region: (u64, u64)) -> Result<(), Error> {
         Err(ErrorKind::Unsupported.into())
     }
