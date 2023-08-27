@@ -1,10 +1,10 @@
 use std::fs::File;
 use std::io::Error;
-use std::os::windows::prelude::{RawHandle, AsRawHandle};
+use std::os::windows::prelude::{AsRawHandle, RawHandle};
 use winapi::shared::minwindef::DWORD;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::ioapiset::DeviceIoControl;
-use winapi::um::winioctl::{FSCTL_SET_ZERO_DATA, FSCTL_SET_SPARSE};
+use winapi::um::winioctl::{FSCTL_SET_SPARSE, FSCTL_SET_ZERO_DATA};
 use winapi::um::winnt::LARGE_INTEGER;
 
 use crate::FileSparse;
@@ -13,18 +13,14 @@ impl FileSparse for File {
     fn deallocate_region(&self, region: (u64, u64)) -> Result<(), std::io::Error> {
         match unsafe { file_sparse_region(self.as_raw_handle(), region) } {
             Ok(()) => Ok(()),
-            Err(ecode) => {
-                Err(Error::from_raw_os_error(ecode as _))
-            }
+            Err(ecode) => Err(Error::from_raw_os_error(ecode as _)),
         }
     }
 
     fn enable_file_sparse(&self) -> Result<(), std::io::Error> {
         match unsafe { file_set_sparse(self.as_raw_handle(), true) } {
             Ok(()) => Ok(()),
-            Err(ecode) => {
-                Err(Error::from_raw_os_error(ecode as _))
-            }
+            Err(ecode) => Err(Error::from_raw_os_error(ecode as _)),
         }
     }
 }
@@ -32,7 +28,7 @@ impl FileSparse for File {
 #[repr(C)]
 #[derive(Debug, PartialEq, Eq)]
 struct FileSetSparseBuffer {
-    set_sparse: bool
+    set_sparse: bool,
 }
 
 #[repr(C)]
@@ -61,7 +57,7 @@ pub unsafe fn file_sparse_region(hndl: RawHandle, region: (u64, u64)) -> Result<
         core::ptr::null_mut(),
         0,
         &mut unknown as *mut u32,
-        core::ptr::null_mut()
+        core::ptr::null_mut(),
     );
 
     if res == 0 {
@@ -76,9 +72,7 @@ pub unsafe fn file_sparse_region(hndl: RawHandle, region: (u64, u64)) -> Result<
 // https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_set_sparse
 // http://www.vsokovikov.narod.ru/New_MSDN_API/Menage_files/fsctl_set_sparse.htm
 pub unsafe fn file_set_sparse(hndl: RawHandle, value: bool) -> Result<(), DWORD> {
-    let mut sparse = FileSetSparseBuffer {
-        set_sparse: value
-    };
+    let mut sparse = FileSetSparseBuffer { set_sparse: value };
 
     let mut unknown = 0u32;
 
@@ -90,7 +84,7 @@ pub unsafe fn file_set_sparse(hndl: RawHandle, value: bool) -> Result<(), DWORD>
         core::ptr::null_mut(),
         0,
         &mut unknown as *mut u32,
-        core::ptr::null_mut()
+        core::ptr::null_mut(),
     );
 
     if res == 0 {
